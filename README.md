@@ -36,6 +36,10 @@ cd cyberspot
     ```bash
     source venv/Scripts/activate
     ```
+    Выйти из venv:
+    ```bash
+    deactivate
+    ```
   * **Windows (PowerShell):**
     ```powershell
     .\venv\Scripts\Activate.ps1
