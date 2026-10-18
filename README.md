@@ -9,7 +9,7 @@
 Перед началом работы убедитесь, что на вашем компьютере установлены:
 * **Python 3.10+** ([скачать с официального сайта](https://www.python.org/downloads/))
 * **Git** ([скачать](https://git-scm.com/))
-* **MySQL Server** (версии 8.0+) с запущенной службой.
+* **MySQL Server** (версии 8.0+) с запущенной системной службой.
 
 ---
 
@@ -36,7 +36,7 @@ cd cyberspot
     ```bash
     source venv/Scripts/activate
     ```
-    Выйти из venv:
+    *Выйти из окружения при необходимости:*
     ```bash
     deactivate
     ```
@@ -44,7 +44,7 @@ cd cyberspot
     ```powershell
     .\venv\Scripts\Activate.ps1
     ```
-    *(Если появляется ошибка доступа скриптов, выполните один раз: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)*
+    *(Если появляется ошибка выполнения скриптов, выполните один раз: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)*
   * **macOS / Linux:**
     ```bash
     source venv/bin/activate
@@ -60,18 +60,19 @@ pip install -r requirements.txt
 
 ---
 
-### 4. Создание базы данных в MySQL
-Перед запуском Django необходимо создать пустую базу данных. Зайдите в **MySQL Workbench** или выполните в консоли MySQL:
+### 4. Создание базы данных через консоль MySQL
 
-```sql
-CREATE DATABASE IF NOT EXISTS cyberspot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+Создайте пустую базу данных одной командой в терминале:
+```bash
+"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p -e "CREATE DATABASE IF NOT EXISTS cyberspot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
+*(При запросе `Enter password:` введите пароль от вашего локального пользователя root).*
 
 ---
 
 ### 5. Настройка переменных окружения (`.env`)
 
-Создайте в корневой папке проекта (рядом с файлом `manage.py`) файл с именем **`.env`** и укажите данные для подключения к вашей базе данных:
+Создайте в корне проекта (рядом с файлом `manage.py`) файл с именем **`.env`** и укажите данные для подключения:
 
 ```env
 SECRET_KEY=django-insecure-ваш-уникальный-ключ-проекта
@@ -87,38 +88,42 @@ DB_PORT=3306
 
 ---
 
-### 6. Создание миграций, применение к базе и загрузка данных
+### 6. Развертывание базы данных и данных
 
-1. **Создание файлов миграций для приложения `booking`:**
+Выберите один из двух вариантов в зависимости от задачи:
+
+#### Вариант А: Быстрый запуск из готового SQL-дампа (Рекомендуется для команды)
+Если в репозитории уже есть файл дампа `cyberspot_dump.sql`, разверните все таблицы и готовые данные одной командой:
+```bash
+"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p cyberspot < cyberspot_dump.sql
+```
+
+#### Вариант Б: Создание таблиц с нуля через миграции Django
+Если вы создаете чистую базу без готового дампа:
+1. Создание файлов миграций:
    ```bash
    python manage.py makemigrations booking
    ```
-
-2. **Применение миграций (создание таблиц в MySQL):**
+2. Применение миграций:
    ```bash
    python manage.py migrate
-   ```
-
-3. **Загрузка готовых тестовых данных (зоны, характеристики, компьютеры):**
-   ```bash
-   python manage.py loaddata initial_data.json
    ```
 
 ---
 
 ### 7. Создание администратора клуба
 
-Создайте учетную запись администратора для входа в панель управления:
+Создайте учетную запись суперпользователя для доступа к панели управления:
 ```bash
 python manage.py createsuperuser
 ```
-*Введите желаемый логин и пароль (поле email можно пропустить, просто нажав `Enter`).*
+*Введите логин и пароль (поле email можно пропустить, нажав `Enter`).*
 
 ---
 
 ### 8. Проверка и запуск сервера
 
-Выполните системную проверку и запустите сервер разработки:
+Выполните системную проверку и запустите локальный сервер разработки:
 ```bash
 python manage.py check
 python manage.py runserver
@@ -126,18 +131,43 @@ python manage.py runserver
 
 ---
 
+## 💾 Резервное копирование и перенос базы (Бэкапы через консоль)
+
+### Экспорт базы данных (Создание дампа)
+Чтобы выгрузить актуальное состояние всей базы (структуру и данные) в файл `cyberspot_dump.sql`:
+
+```bash
+"/c/Program Files/MySQL/MySQL Workbench 8.0/mysqldump.exe" -u root -p --default-character-set=utf8mb4 cyberspot > cyberspot_dump.sql
+```
+*(Созданный файл `cyberspot_dump.sql` можно закоммитить в Git для передачи тиммейту).*
+
+### Импорт базы данных (Восстановление из дампа)
+Чтобы восстановить базу из существующего файла дампа:
+
+1. Убедитесь, что база создана (см. **Шаг 4**).
+2. Выполните импорт:
+   ```bash
+   mysql -u root -p cyberspot < cyberspot_dump.sql
+   ```
+
+> 💡 **Примечание для Windows:**  
+> Если консоль пишет `command not found` для `mysql` или `mysqldump`, указывайте полный путь к утилитам в кавычках (например: `"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysqldump.exe"`), либо добавьте папку `bin` вашего MySQL в системную переменную `PATH`.
+
+---
+
 ## 🌐 Ссылки для работы
 
 После запуска локального сервера:
 * **Панель администратора:** [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)  
-  *(используйте данные учетной записи администратора, созданной на Шаге 7)*.
+  *(используйте логин и пароль администратора, созданного на Шаге 7)*.
 
 ---
 
 ## 🛠 Частые проблемы и их решение
 
-| Ошибка | Причина | Решение |
+| Ошибка | Причина | Решение через консоль |
 | :--- | :--- | :--- |
-| **`OperationalError (1049, "Unknown database 'cyberspot'")`** | База данных еще не создана на сервере MySQL | Выполните SQL-запрос из **Шага 4** в Workbench или терминале |
+| **`OperationalError (1049, "Unknown database 'cyberspot'")`** | База данных еще не создана на сервере MySQL | Выполните команду создания базы из **Шага 4** |
 | **`OperationalError (1045, "Access denied...")`** | Неверный логин или пароль к MySQL | Проверьте значения `DB_USER` и `DB_PASSWORD` в файле `.env` |
-| **Ошибки скриптов активации в PowerShell** | Политика безопасности Windows блокирует запуск `.ps1` | Запустите PowerShell от администратора и выполните: `Set-ExecutionPolicy RemoteSigned` |
+| **Ошибки скриптов активации в PowerShell** | Политика безопасности Windows блокирует запуск `.ps1` | В PowerShell от администратора выполните: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| **`bash: mysql: command not found`** | Утилиты MySQL не прописаны в системном `PATH` | Запускайте утилиту по полному пути: `"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe"` |
