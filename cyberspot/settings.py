@@ -139,3 +139,5 @@ MAILERS = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# Кастомная модель пользователя
+AUTH_USER_MODEL = 'booking.User'
