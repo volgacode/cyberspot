@@ -131,13 +131,21 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# MAILERS = {
+#     'default': {
+#         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+#     },
+# }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 # Кастомная модель пользователя
 AUTH_USER_MODEL = 'booking.User'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+# Правила бронирования
+MAX_BOOKING_DAYS_AHEAD = 7        # N: бронь не дальше чем на N дней вперёд
+CLIENT_CANCEL_BEFORE_MINUTES = 60 # клиент отменяет не позже чем за час до начала
+# Вход и выход
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
