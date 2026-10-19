@@ -76,8 +76,6 @@ pip install -r requirements.txt
 
 ```env
 SECRET_KEY=django-insecure-ваш-уникальный-ключ-проекта
-DEBUG=True
-
 # Настройки подключения к MySQL
 DB_NAME=cyberspot
 DB_USER=root
@@ -147,7 +145,7 @@ python manage.py runserver
 1. Убедитесь, что база создана (см. **Шаг 4**).
 2. Выполните импорт:
    ```bash
-   mysql -u root -p cyberspot < cyberspot_dump.sql
+   "/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p cyberspot < cyberspot_dump.sql
    ```
 
 > 💡 **Примечание для Windows:**  
