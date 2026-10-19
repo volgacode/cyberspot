@@ -1,22 +1,35 @@
 from django.contrib import admin
-
-# Register your models here.
-
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Room, PcSetupSpec, PcSetup, Tariff, Reserve, ReservePcSetup
+
+from .models import (
+    User, Place, Room, PcSetupSpec, PcSetup, Tariff, Reserve, ReservePcSetup,
+)
+
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    fieldsets = UserAdmin.fieldsets + (
-        ('Данные клуба', {'fields': ('role', 'avatar')}),
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Личные данные', {'fields': ('first_name', 'last_name', 'avatar')}),
+        ('Доступ', {'fields': ('role', 'is_active')}),
+        ('Даты', {'fields': ('last_login', 'date_joined')}),
     )
-    list_display = ('username', 'first_name', 'last_name', 'role', 'is_active', 'is_staff')
+    add_fieldsets = (
+        (None, {'classes': ('wide',), 'fields': ('username', 'password1', 'password2', 'role')}),
+    )
+    list_display = ('username', 'first_name', 'last_name', 'role', 'is_active')
     list_filter = ('role', 'is_active')
+
+
+@admin.register(Place)
+class PlaceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'area', 'description')
 
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('name', 'area_size', 'description')
+    list_display = ('name', 'place', 'area', 'description')
+    list_filter = ('place',)
 
 
 @admin.register(PcSetupSpec)
@@ -26,7 +39,7 @@ class PcSetupSpecAdmin(admin.ModelAdmin):
 
 @admin.register(PcSetup)
 class PcSetupAdmin(admin.ModelAdmin):
-    list_display = ('pc_number', 'room', 'status', 'spec')
+    list_display = ('pc_number', 'room', 'status', 'spec', 'pos_x', 'pos_y')
     list_filter = ('room', 'status')
 
 
