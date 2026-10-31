@@ -382,3 +382,89 @@ def _cancel_future_reserves(cur, account_id):
                WHERE x.id_reserve = v.id_reserve) > %s
     """, [account_id, timezone.now()])
     return cur.rowcount
+
+def register_account(username, password, role='client'):
+    username = (username or '').strip()
+    if not USERNAME_RE.fullmatch(username):
+        raise ServiceError(
+            'Логин: 3–150 символов — буквы, цифры и . @ + - _'
+        )
+    if role not in ROLE_LEVEL:
+        raise ServiceError('Неизвестная роль.')
+    if _one('SELECT 1 AS x FROM account WHERE username = %s', [username]):
+        raise ServiceError('Этот логин уже занят.')
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                'INSERT INTO account (username, password, role, is_active, date_joined) '
+                'VALUES (%s, %s, %s, 1, %s)',
+                [username, make_password(password), role, timezone.now()],
+            )
+            return cur.lastrowid
+    except IntegrityError:
+        raise ServiceError('Этот логин уже занят.')
+ 
+ 
+def list_accounts():
+    return _all(
+        'SELECT id_account, username, role, is_active, date_joined, first_name, last_name '
+        'FROM account ORDER BY id_account'
+    )
+ 
+ 
+def set_account_active(account_id, active, actor):
+    """
+    Блокировка / разблокировка. Заблокировать можно только пользователя
+    с РОЛЬЮ НИЖЕ своей; при блокировке будущие брони отменяются.
+    """
+    account_id = _to_int(account_id, 'номер аккаунта')
+    target = _one('SELECT id_account, role FROM account WHERE id_account = %s', [account_id])
+    if not target:
+        raise ServiceError('Аккаунт не найден.')
+    if target['id_account'] == actor.id:
+        raise ServiceError('Нельзя заблокировать самого себя.')
+    if ROLE_LEVEL.get(target['role'], 0) >= actor.level:
+        raise ServiceError('Недостаточно прав для этого аккаунта.')
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            'UPDATE account SET is_active = %s WHERE id_account = %s',
+            [1 if active else 0, account_id],
+        )
+        if not active:
+            return _cancel_future_reserves(cur, account_id)
+    return 0
+ 
+ 
+def set_account_role(account_id, role, actor):
+    """Только суперпользователь; свою роль менять нельзя."""
+    account_id = _to_int(account_id, 'номер аккаунта')
+    if not actor.is_super:
+        raise ServiceError('Недостаточно прав.')
+    if role not in ROLE_LEVEL:
+        raise ServiceError('Неизвестная роль.')
+    if account_id == actor.id:
+        raise ServiceError('Свою роль менять нельзя.')
+    if not _exec('UPDATE account SET role = %s WHERE id_account = %s', [role, account_id]):
+        if not _one('SELECT 1 AS x FROM account WHERE id_account = %s', [account_id]):
+            raise ServiceError('Аккаунт не найден.')
+ 
+ 
+def delete_own_account(user):
+    """
+    «Удаление» аккаунта клиентом — мягкое: история броней сохраняется,
+    будущие брони отменяются, логин освобождается, войти нельзя.
+    """
+    with transaction.atomic(), connection.cursor() as cur:
+        if user.is_super:
+            cur.execute(
+                "SELECT COUNT(*) FROM account WHERE role = 'superuser' AND is_active = 1"
+            )
+            if cur.fetchone()[0] <= 1:
+                raise ServiceError('Нельзя удалить последнего суперпользователя.')
+        _cancel_future_reserves(cur, user.id)
+        cur.execute("""
+            UPDATE account
+            SET is_active = 0, username = CONCAT('deleted_', id_account),
+                password = %s, first_name = NULL, last_name = NULL, avatar = NULL
+            WHERE id_account = %s
+        """, [make_password(None), user.id])  
