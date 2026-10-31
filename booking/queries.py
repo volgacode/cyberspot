@@ -148,3 +148,237 @@ def room_pcs(room_id, start=None, end=None):
         r['busy'] = bool(r['busy'])
         r['bookable'] = r['status'] == PC_READY and not r['busy']
     return rows
+
+def _check_window(start):
+    now = timezone.now()
+    if start < now - PAST_TOLERANCE:
+        raise ServiceError('Нельзя забронировать время в прошлом.')
+    days = settings.MAX_BOOKING_DAYS_AHEAD
+    if start > now + timedelta(days=days):
+        raise ServiceError(f'Нельзя бронировать более чем на {days} дн. вперёд.')
+ 
+ 
+def _slot_busy(cur, pc_id, start, end, exclude_item=None):
+    sql = """SELECT 1 FROM reserve_pc_setup x
+             JOIN reserve v ON v.id_reserve = x.id_reserve
+             WHERE x.id_pc_setup = %s AND v.status = 'active'
+               AND x.start_time < %s AND x.end_time > %s"""
+    params = [pc_id, end, start]
+    if exclude_item is not None:
+        sql += ' AND x.id_reserve_pc <> %s'
+        params.append(exclude_item)
+    cur.execute(sql + ' LIMIT 1', params)
+    return cur.fetchone() is not None
+ 
+ 
+def _recalc_price(cur, reserve_id):
+    cur.execute("""
+        UPDATE reserve SET final_price = (
+            SELECT COALESCE(SUM(t.unit_price * x.tariff_unit_count), 0)
+            FROM reserve_pc_setup x JOIN tariff t ON t.id_tariff = x.id_tariff
+            WHERE x.id_reserve = %s)
+        WHERE id_reserve = %s
+    """, [reserve_id, reserve_id])
+ 
+ 
+def create_booking(account_id, pc_id, tariff_id, units, start):
+    """Создаёт бронь из одного места. Возвращает id_reserve."""
+    units = _to_int(units, 'количество единиц')
+    max_units = getattr(settings, 'MAX_BOOKING_UNITS', 24)
+    if units < 1 or units > max_units:
+        raise ServiceError(f'Количество единиц тарифа: от 1 до {max_units}.')
+    if not isinstance(start, datetime):
+        raise ServiceError('Укажите время начала.')
+    _check_window(start)
+ 
+    with transaction.atomic(), connection.cursor() as cur:
+        # блокируем строку ПК: параллельные брони этого места встанут в очередь
+        cur.execute(
+            'SELECT id_room, status FROM pc_setup WHERE id_pc_setup = %s FOR UPDATE',
+            [pc_id],
+        )
+        pc = cur.fetchone()
+        if not pc:
+            raise ServiceError('Место не найдено.')
+        pc_room, pc_status = pc
+        if pc_status != PC_READY:
+            raise ServiceError('Это место сейчас недоступно.')
+ 
+        cur.execute('SELECT is_active FROM account WHERE id_account = %s', [account_id])
+        acc = cur.fetchone()
+        if not acc or not acc[0]:
+            raise ServiceError('Аккаунт заблокирован или не существует.')
+ 
+        cur.execute(
+            'SELECT id_room, unit_price, duration_minutes FROM tariff WHERE id_tariff = %s',
+            [tariff_id],
+        )
+        tariff = cur.fetchone()
+        if not tariff:
+            raise ServiceError('Тариф не найден.')
+        t_room, unit_price, duration = tariff
+        if t_room != pc_room:
+            raise ServiceError('Тариф относится к другой зоне.')
+ 
+        end = start + timedelta(minutes=duration * units)
+        if _slot_busy(cur, pc_id, start, end):
+            raise ServiceError('Это место уже занято на выбранное время.')
+ 
+        cur.execute(
+            "INSERT INTO reserve (id_account, created_at, final_price, status) "
+            "VALUES (%s, %s, %s, 'active')",
+            [account_id, timezone.now(), unit_price * units],
+        )
+        reserve_id = cur.lastrowid
+        cur.execute(
+            'INSERT INTO reserve_pc_setup '
+            '(id_reserve, id_pc_setup, id_tariff, tariff_unit_count, start_time, end_time) '
+            'VALUES (%s, %s, %s, %s, %s, %s)',
+            [reserve_id, pc_id, tariff_id, units, start, end],
+        )
+        return reserve_id
+ 
+ 
+def list_reserves(account_id=None, only_active=False):
+    """
+    Брони с вложенными местами (ключ items).
+    account_id=None -> все брони (для персонала).
+    Для каждой брони считается can_client_cancel (правило «за N минут до начала»).
+    """
+    where, params = [], []
+    if account_id is not None:
+        where.append('v.id_account = %s')
+        params.append(account_id)
+    if only_active:
+        where.append("v.status = 'active'")
+    where_sql = ('WHERE ' + ' AND '.join(where)) if where else ''
+ 
+    reserves = _all(f"""
+        SELECT v.id_reserve, v.id_account, a.username, v.created_at,
+               v.final_price, v.status,
+               MIN(x.start_time) AS first_start, MAX(x.end_time) AS last_end
+        FROM reserve v
+        LEFT JOIN account a ON a.id_account = v.id_account
+        LEFT JOIN reserve_pc_setup x ON x.id_reserve = v.id_reserve
+        {where_sql}
+        GROUP BY v.id_reserve, v.id_account, a.username, v.created_at, v.final_price, v.status
+        ORDER BY first_start DESC, v.id_reserve DESC
+    """, params)
+    if not reserves:
+        return []
+ 
+    ids = [r['id_reserve'] for r in reserves]
+    marks = ', '.join(['%s'] * len(ids))
+    items = _all(f"""
+        SELECT x.id_reserve_pc, x.id_reserve, x.id_pc_setup, p.pc_setup_number,
+               rm.id_room, rm.name AS room_name,
+               t.name AS tariff_name, t.unit_price, t.duration_minutes,
+               x.tariff_unit_count, x.start_time, x.end_time
+        FROM reserve_pc_setup x
+        JOIN pc_setup p ON p.id_pc_setup = x.id_pc_setup
+        JOIN room rm ON rm.id_room = p.id_room
+        JOIN tariff t ON t.id_tariff = x.id_tariff
+        WHERE x.id_reserve IN ({marks})
+        ORDER BY x.start_time
+    """, ids)
+ 
+    by_reserve = {}
+    for it in items:
+        by_reserve.setdefault(it['id_reserve'], []).append(it)
+ 
+    now = timezone.now()
+    delta = timedelta(minutes=settings.CLIENT_CANCEL_BEFORE_MINUTES)
+    for r in reserves:
+        r['items'] = by_reserve.get(r['id_reserve'], [])
+        first = r['first_start']
+        r['can_client_cancel'] = (
+            r['status'] == RESERVE_ACTIVE and (first is None or first - now >= delta)
+        )
+    return reserves
+ 
+ 
+def cancel_reserve(reserve_id, user):
+    """
+    Клиент: только свою и не позже чем за CLIENT_CANCEL_BEFORE_MINUTES до начала.
+    Админ / суперпользователь: любую активную.
+    """
+    reserve_id = _to_int(reserve_id, 'номер брони')
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            'SELECT id_account, status FROM reserve WHERE id_reserve = %s FOR UPDATE',
+            [reserve_id],
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ServiceError('Бронь не найдена.')
+        owner, status = row
+        if status != RESERVE_ACTIVE:
+            raise ServiceError('Бронь уже отменена.')
+        if not user.is_club_admin:
+            if owner != user.id:
+                raise ServiceError('Это чужая бронь.')
+            cur.execute(
+                'SELECT MIN(start_time) FROM reserve_pc_setup WHERE id_reserve = %s',
+                [reserve_id],
+            )
+            first = cur.fetchone()[0]
+            limit = settings.CLIENT_CANCEL_BEFORE_MINUTES
+            if first is not None and first - timezone.now() < timedelta(minutes=limit):
+                raise ServiceError(
+                    f'Отменить можно не позже чем за {limit} мин. до начала. '
+                    f'Обратитесь к администратору.'
+                )
+        cur.execute(
+            "UPDATE reserve SET status = 'cancelled' WHERE id_reserve = %s", [reserve_id]
+        )
+ 
+ 
+def extend_booking_item(item_id, extra_units):
+    """Админ: добавить время (единицы тарифа) к месту в брони."""
+    item_id = _to_int(item_id, 'номер места в брони')
+    extra = _to_int(extra_units, 'количество единиц')
+    if extra < 1:
+        raise ServiceError('Добавить можно минимум одну единицу тарифа.')
+ 
+    with transaction.atomic(), connection.cursor() as cur:
+        # одна блокирующая выборка: место в брони, тариф, бронь и сам ПК
+        cur.execute("""
+            SELECT x.id_reserve, x.id_pc_setup, x.tariff_unit_count, x.end_time,
+                   t.duration_minutes, v.status
+            FROM reserve_pc_setup x
+            JOIN tariff t ON t.id_tariff = x.id_tariff
+            JOIN reserve v ON v.id_reserve = x.id_reserve
+            JOIN pc_setup p ON p.id_pc_setup = x.id_pc_setup
+            WHERE x.id_reserve_pc = %s
+            FOR UPDATE
+        """, [item_id])
+        row = cur.fetchone()
+        if not row:
+            raise ServiceError('Место в брони не найдено.')
+        reserve_id, pc_id, count, end, duration, status = row
+        if status != RESERVE_ACTIVE:
+            raise ServiceError('Бронь отменена.')
+        if end < timezone.now():
+            raise ServiceError('Сеанс уже закончился.')
+ 
+        new_end = end + timedelta(minutes=duration * extra)
+        if _slot_busy(cur, pc_id, end, new_end, exclude_item=item_id):
+            raise ServiceError('Дальше это место уже занято другой бронью.')
+ 
+        cur.execute(
+            'UPDATE reserve_pc_setup SET tariff_unit_count = %s, end_time = %s '
+            'WHERE id_reserve_pc = %s',
+            [count + extra, new_end, item_id],
+        )
+        _recalc_price(cur, reserve_id)
+ 
+ 
+def _cancel_future_reserves(cur, account_id):
+    """Отменяет ещё не начавшиеся брони аккаунта. Возвращает число."""
+    cur.execute("""
+        UPDATE reserve v SET v.status = 'cancelled'
+        WHERE v.id_account = %s AND v.status = 'active'
+          AND (SELECT MIN(x.start_time) FROM reserve_pc_setup x
+               WHERE x.id_reserve = v.id_reserve) > %s
+    """, [account_id, timezone.now()])
+    return cur.rowcount
