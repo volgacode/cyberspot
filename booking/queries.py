@@ -32,23 +32,19 @@ def _rows(cur):
     cols = [c[0] for c in cur.description]
     return [dict(zip(cols, row)) for row in cur.fetchall()]
  
- 
 def _all(sql, params=()):
     with connection.cursor() as cur:
         cur.execute(sql, params)
         return _rows(cur)
  
- 
 def _one(sql, params=()):
     rows = _all(sql, params)
     return rows[0] if rows else None
- 
  
 def _exec(sql, params=()):
     with connection.cursor() as cur:
         cur.execute(sql, params)
         return cur.rowcount
- 
  
 def _points(value):
     """JSON-колонка приходит из драйвера строкой."""
@@ -60,14 +56,12 @@ def _points(value):
         return json.loads(value)
     return value
  
- 
 def _check_points(points, what):
     try:
         validate_points(points)
     except ValidationError as e:
         raise ServiceError(f'{what}: ' + ' '.join(e.messages))
     return [[int(x), int(y)] for x, y in points]
- 
  
 def _to_int(value, what='значение'):
     try:
@@ -102,7 +96,6 @@ def list_rooms():
         r['room_points'] = _points(r['room_points'])
         r['pc_ready'] = int(r['pc_ready'])
     return rows
- 
  
 def get_room(room_id):
     row = _one(
@@ -157,7 +150,6 @@ def _check_window(start):
     if start > now + timedelta(days=days):
         raise ServiceError(f'Нельзя бронировать более чем на {days} дн. вперёд.')
  
- 
 def _slot_busy(cur, pc_id, start, end, exclude_item=None):
     sql = """SELECT 1 FROM reserve_pc_setup x
              JOIN reserve v ON v.id_reserve = x.id_reserve
@@ -170,7 +162,6 @@ def _slot_busy(cur, pc_id, start, end, exclude_item=None):
     cur.execute(sql + ' LIMIT 1', params)
     return cur.fetchone() is not None
  
- 
 def _recalc_price(cur, reserve_id):
     cur.execute("""
         UPDATE reserve SET final_price = (
@@ -179,7 +170,6 @@ def _recalc_price(cur, reserve_id):
             WHERE x.id_reserve = %s)
         WHERE id_reserve = %s
     """, [reserve_id, reserve_id])
- 
  
 def create_booking(account_id, pc_id, tariff_id, units, start):
     """Создаёт бронь из одного места. Возвращает id_reserve."""
@@ -238,7 +228,6 @@ def create_booking(account_id, pc_id, tariff_id, units, start):
         )
         return reserve_id
  
- 
 def list_reserves(account_id=None, only_active=False):
     """
     Брони с вложенными местами (ключ items).
@@ -296,7 +285,6 @@ def list_reserves(account_id=None, only_active=False):
         )
     return reserves
  
- 
 def cancel_reserve(reserve_id, user):
     """
     Клиент: только свою и не позже чем за CLIENT_CANCEL_BEFORE_MINUTES до начала.
@@ -331,7 +319,6 @@ def cancel_reserve(reserve_id, user):
         cur.execute(
             "UPDATE reserve SET status = 'cancelled' WHERE id_reserve = %s", [reserve_id]
         )
- 
  
 def extend_booking_item(item_id, extra_units):
     """Админ: добавить время (единицы тарифа) к месту в брони."""
@@ -372,7 +359,6 @@ def extend_booking_item(item_id, extra_units):
         )
         _recalc_price(cur, reserve_id)
  
- 
 def _cancel_future_reserves(cur, account_id):
     """Отменяет ещё не начавшиеся брони аккаунта. Возвращает число."""
     cur.execute("""
@@ -404,13 +390,11 @@ def register_account(username, password, role='client'):
     except IntegrityError:
         raise ServiceError('Этот логин уже занят.')
  
- 
 def list_accounts():
     return _all(
         'SELECT id_account, username, role, is_active, date_joined, first_name, last_name '
         'FROM account ORDER BY id_account'
     )
- 
  
 def set_account_active(account_id, active, actor):
     """
@@ -434,7 +418,6 @@ def set_account_active(account_id, active, actor):
             return _cancel_future_reserves(cur, account_id)
     return 0
  
- 
 def set_account_role(account_id, role, actor):
     """Только суперпользователь; свою роль менять нельзя."""
     account_id = _to_int(account_id, 'номер аккаунта')
@@ -447,7 +430,6 @@ def set_account_role(account_id, role, actor):
     if not _exec('UPDATE account SET role = %s WHERE id_account = %s', [role, account_id]):
         if not _one('SELECT 1 AS x FROM account WHERE id_account = %s', [account_id]):
             raise ServiceError('Аккаунт не найден.')
- 
  
 def delete_own_account(user):
     """
@@ -467,4 +449,137 @@ def delete_own_account(user):
             SET is_active = 0, username = CONCAT('deleted_', id_account),
                 password = %s, first_name = NULL, last_name = NULL, avatar = NULL
             WHERE id_account = %s
-        """, [make_password(None), user.id])  
+        """, [make_password(None), user.id])
+
+def set_place_points(place_id, points):
+    points = _check_points(points, 'Контур помещения')
+    _exec('UPDATE place SET place_points = %s WHERE id_place = %s',
+          [json.dumps(points), place_id])
+ 
+def set_room_points(room_id, points):
+    points = _check_points(points, 'Контур комнаты')
+    row = _one(
+        'SELECT p.place_points FROM room r JOIN place p ON p.id_place = r.id_place '
+        'WHERE r.id_room = %s', [room_id]
+    )
+    if row is None:
+        raise ServiceError('Комната не найдена.')
+    outline = _points(row['place_points'])
+    if outline and points_are_valid(outline):
+        if any(not point_in_polygon(x, y, outline) for x, y in points):
+            raise ServiceError('Комната выходит за контур помещения.')
+    _exec('UPDATE room SET room_points = %s WHERE id_room = %s',
+          [json.dumps(points), room_id])
+ 
+def move_pc(pc_id, x, y, rotation=0):
+    """x = y = None — снять место с плана."""
+    if x is None and y is None:
+        _exec('UPDATE pc_setup SET pos_x = NULL, pos_y = NULL, rotation = NULL '
+              'WHERE id_pc_setup = %s', [pc_id])
+        return
+    if x is None or y is None:
+        raise ServiceError('Координаты X и Y задаются вместе.')
+    x, y = _to_int(x, 'X'), _to_int(y, 'Y')
+    rotation = 0 if rotation is None else _to_int(rotation, 'поворот')
+    if x < 0 or y < 0:
+        raise ServiceError('Координаты не могут быть отрицательными.')
+    if not 0 <= rotation <= 359:
+        raise ServiceError('Поворот: от 0 до 359°.')
+    row = _one(
+        'SELECT r.room_points FROM pc_setup p JOIN room r ON r.id_room = p.id_room '
+        'WHERE p.id_pc_setup = %s', [pc_id]
+    )
+    if row is None:
+        raise ServiceError('Место не найдено.')
+    shape = _points(row['room_points'])
+    if shape and points_are_valid(shape) and not point_in_polygon(x, y, shape):
+        raise ServiceError('Центр ПК должен лежать внутри своей комнаты.')
+    _exec('UPDATE pc_setup SET pos_x = %s, pos_y = %s, rotation = %s '
+          'WHERE id_pc_setup = %s', [x, y, rotation, pc_id])
+ 
+def set_pc_status(pc_id, status):
+    if status not in (PC_READY, PC_NOT_READY):
+        raise ServiceError('Неизвестный статус.')
+    _exec('UPDATE pc_setup SET status = %s WHERE id_pc_setup = %s', [status, pc_id])
+ 
+def create_room(place_id, name, description=None):
+    name = (name or '').strip()
+    if not name:
+        raise ServiceError('Укажите название зоны.')
+    if _one('SELECT 1 AS x FROM room WHERE id_place = %s AND name = %s', [place_id, name]):
+        raise ServiceError('Зона с таким названием уже есть.')
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO room (id_place, name, description) VALUES (%s, %s, %s)',
+            [place_id, name, description or None],
+        )
+        return cur.lastrowid
+ 
+def create_tariff(room_id, name, unit_price, duration_minutes, description=None):
+    name = (name or '').strip()
+    if not name:
+        raise ServiceError('Укажите название тарифа.')
+    try:
+        price = float(unit_price)
+    except (TypeError, ValueError):
+        raise ServiceError('Некорректная цена.')
+    duration = _to_int(duration_minutes, 'длительность')
+    if price < 0:
+        raise ServiceError('Цена не может быть отрицательной.')
+    if duration < 1:
+        raise ServiceError('Длительность должна быть больше нуля.')
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO tariff (id_room, name, description, unit_price, duration_minutes) '
+            'VALUES (%s, %s, %s, %s, %s)',
+            [room_id, name, description or None, price, duration],
+        )
+        return cur.lastrowid
+ 
+def list_specs():
+    return _all('SELECT * FROM pc_setup_spec ORDER BY id_pc_setup_spec')
+ 
+def create_spec(cpu, gpu, ram, monitor, mouse=None, keyboard=None, headphones=None, chair=None):
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO pc_setup_spec (cpu, gpu, ram, monitor, mouse, keyboard, headphones, chair) '
+            'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+            [cpu, gpu, ram, monitor, mouse, keyboard, headphones, chair],
+        )
+        return cur.lastrowid
+
+def create_pc(room_id, spec_id, number, status=PC_READY):
+    """Номер ПК сквозной в пределах помещения; проверяем под блокировкой помещения."""
+    number = _to_int(number, 'номер ПК')
+    if number < 1:
+        raise ServiceError('Номер ПК должен быть больше нуля.')
+    if status not in (PC_READY, PC_NOT_READY):
+        raise ServiceError('Неизвестный статус.')
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            'SELECT r.id_place FROM room r WHERE r.id_room = %s', [room_id]
+        )
+        row = cur.fetchone()
+        if not row:
+            raise ServiceError('Зона не найдена.')
+        cur.execute('SELECT id_place FROM place WHERE id_place = %s FOR UPDATE', [row[0]])
+        cur.execute("""
+            SELECT 1 FROM pc_setup p JOIN room r ON r.id_room = p.id_room
+            WHERE r.id_place = %s AND p.pc_setup_number = %s LIMIT 1
+        """, [row[0], number])
+        if cur.fetchone():
+            raise ServiceError(f'ПК с номером {number} уже есть в этом помещении.')
+        cur.execute(
+            'INSERT INTO pc_setup (id_pc_setup_spec, id_room, pc_setup_number, status) '
+            'VALUES (%s, %s, %s, %s)',
+            [spec_id, room_id, number, status],
+        )
+        return cur.lastrowid
+
+def list_all_pcs():
+    """Все места с комнатой — для редактора плана."""
+    return _all("""
+        SELECT p.id_pc_setup, p.id_room, p.id_pc_setup_spec, p.pc_setup_number,
+               p.status, p.pos_x, p.pos_y, p.rotation
+        FROM pc_setup p ORDER BY p.id_room, p.pc_setup_number
+    """)
