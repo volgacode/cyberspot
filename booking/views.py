@@ -102,3 +102,83 @@ def delete_account(request):
         return redirect('my_reserves')
     logout(request)
     return redirect('login')
+
+@role_required('client')
+def zones(request):
+    return render(request, 'booking/zones.html', {
+        'place': queries.get_place(),
+        'rooms': queries.list_rooms(),
+    })
+ 
+@role_required('client')
+def zone_detail(request, room_id):
+    room = queries.get_room(room_id)
+    if room is None:
+        raise Http404
+    tariffs = queries.list_tariffs(room_id)
+ 
+    tariff_id = _int(request.GET.get('tariff'), None)
+    tariff = next((t for t in tariffs if t['id_tariff'] == tariff_id), None) \
+        or (tariffs[0] if tariffs else None)
+    units = max(1, _int(request.GET.get('units'), 1))
+    start = _parse_dt(request.GET.get('start'))
+ 
+    end = None
+    if tariff and start:
+        end = start + timedelta(minutes=tariff['duration_minutes'] * units)
+ 
+    now = timezone.now()
+    return render(request, 'booking/zone_detail.html', {
+        'place': queries.get_place(),
+        'room': room,
+        'tariffs': tariffs,
+        'tariff': tariff,
+        'units': units,
+        'start': start,
+        'end': end,
+        'pcs': queries.room_pcs(room_id, start, end),
+        'min_start': now.strftime(DT_FORMAT),
+        'max_start': (now + timedelta(days=settings.MAX_BOOKING_DAYS_AHEAD)).strftime(DT_FORMAT),
+    })
+ 
+@require_POST
+@role_required('client')
+def book(request):
+    room_id = _int(request.POST.get('room_id'), 0)
+    back_params = {
+        'tariff': request.POST.get('tariff_id', ''),
+        'units': request.POST.get('units', '1'),
+        'start': request.POST.get('start', ''),
+    }
+    try:
+        queries.create_booking(
+            account_id=request.user.id,
+            pc_id=_int(request.POST.get('pc_id'), 0),
+            tariff_id=_int(request.POST.get('tariff_id'), 0),
+            units=request.POST.get('units'),
+            start=_parse_dt(request.POST.get('start')),
+        )
+    except ServiceError as e:
+        messages.error(request, str(e))
+        url = reverse('zone_detail', args=[room_id]) if room_id else reverse('zones')
+        return redirect(f'{url}?{urlencode(back_params)}')
+    messages.success(request, 'Место забронировано.')
+    return redirect('my_reserves')
+ 
+@role_required('client')
+def my_reserves(request):
+    return render(request, 'booking/my_reserves.html', {
+        'reserves': queries.list_reserves(account_id=request.user.id),
+    })
+ 
+@require_POST
+@role_required('client')
+def cancel_reserve(request):
+    """Общий обработчик отмены: права клиента / админа проверяются в queries."""
+    try:
+        queries.cancel_reserve(request.POST.get('reserve_id'), request.user)
+        messages.success(request, 'Бронь отменена.')
+    except ServiceError as e:
+        messages.error(request, str(e))
+    fallback = 'staff_reserves' if request.user.is_club_admin else 'my_reserves'
+    return redirect(_safe_next(request, fallback))
