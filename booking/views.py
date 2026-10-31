@@ -237,3 +237,70 @@ def staff_set_role(request):
     except ServiceError as e:
         messages.error(request, str(e))
     return redirect('staff_accounts')
+
+@role_required('superuser')
+def editor(request):
+    return render(request, 'booking/editor.html', {
+        'place': queries.get_place(),
+        'rooms': queries.list_rooms(),
+        'pcs': queries.list_all_pcs(),
+        'specs': queries.list_specs(),
+    })
+ 
+def _api(handler):
+    """JSON POST-эндпоинт редактора: единая обработка ошибок."""
+    @require_POST
+    @role_required('superuser', api=True)
+    def view(request, *args, **kwargs):
+        try:
+            result = handler(_json_body(request), *args, **kwargs)
+        except ServiceError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'ok': True, **(result or {})})
+    view.__name__ = handler.__name__
+    return view
+ 
+@_api
+def api_place_points(data, place_id):
+    queries.set_place_points(place_id, data.get('points'))
+ 
+@_api
+def api_room_points(data, room_id):
+    queries.set_room_points(room_id, data.get('points'))
+ 
+@_api
+def api_pc_move(data, pc_id):
+    queries.move_pc(pc_id, data.get('x'), data.get('y'), data.get('rotation', 0))
+ 
+@_api
+def api_pc_status(data, pc_id):
+    queries.set_pc_status(pc_id, data.get('status'))
+ 
+@_api
+def api_room_create(data):
+    place = queries.get_place()
+    if place is None:
+        raise ServiceError('Сначала создайте помещение.')
+    return {'id': queries.create_room(
+        place['id_place'], data.get('name'), data.get('description'))}
+ 
+@_api
+def api_pc_create(data):
+    return {'id': queries.create_pc(
+        data.get('room_id'), data.get('spec_id'), data.get('number'),
+        data.get('status', queries.PC_READY))}
+ 
+@_api
+def api_tariff_create(data):
+    return {'id': queries.create_tariff(
+        data.get('room_id'), data.get('name'), data.get('unit_price'),
+        data.get('duration_minutes'), data.get('description'))}
+ 
+@_api
+def api_spec_create(data):
+    for field in ('cpu', 'gpu', 'ram', 'monitor'):
+        if not (data.get(field) or '').strip():
+            raise ServiceError('Заполните CPU, GPU, RAM и монитор.')
+    return {'id': queries.create_spec(
+        data['cpu'], data['gpu'], data['ram'], data['monitor'],
+        data.get('mouse'), data.get('keyboard'), data.get('headphones'), data.get('chair'))}
