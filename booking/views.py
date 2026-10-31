@@ -25,20 +25,17 @@ def _parse_dt(value):
     except (TypeError, ValueError):
         return None
  
- 
 def _int(value, default):
     try:
         return int(value)
     except (TypeError, ValueError):
         return default
  
- 
 def _safe_next(request, fallback):
     nxt = request.POST.get('next') or request.GET.get('next')
     if nxt and url_has_allowed_host_and_scheme(nxt, request.get_host()):
         return nxt
     return reverse(fallback)
- 
  
 def _json_body(request):
     try:
@@ -48,3 +45,60 @@ def _json_body(request):
     if not isinstance(data, dict):
         raise ServiceError('Ожидался JSON-объект.')
     return data
+
+def home(request):
+    return redirect('zones' if request.user.is_authenticated else 'login')
+ 
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('zones')
+    error, username = None, ''
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        try:
+            validate_password(password)
+            queries.register_account(username, password)
+        except ValidationError as e:
+            error = ' '.join(e.messages)
+        except ServiceError as e:
+            error = str(e)
+        else:
+            user = authenticate(request, username=username, password=password)
+            login(request, user)
+            return redirect('zones')
+    return render(request, 'booking/register.html', {'error': error, 'username': username})
+ 
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('zones')
+    error, username = None, ''
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        user = authenticate(
+            request, username=username, password=request.POST.get('password', '')
+        )
+        if user is None:
+            error = 'Неверный логин или пароль, либо аккаунт заблокирован.'
+        else:
+            login(request, user)
+            return redirect(_safe_next(request, 'zones'))
+    return render(request, 'booking/login.html', {
+        'error': error, 'username': username, 'next': request.GET.get('next', ''),
+    })
+ 
+@require_POST
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+ 
+@require_POST
+@role_required('client')
+def delete_account(request):
+    try:
+        queries.delete_own_account(request.user)
+    except ServiceError as e:
+        messages.error(request, str(e))
+        return redirect('my_reserves')
+    logout(request)
+    return redirect('login')
