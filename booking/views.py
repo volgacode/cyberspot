@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import Http404, JsonResponse
-from django.shortcuts import redire
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
@@ -17,7 +17,7 @@ from . import queries
 from .decorators import role_required
 from .queries import ServiceError
  
-DT_FORMAT = '%Y-%m-%dT%H:%M'   # формат <input type="datetime-local">
+DT_FORMAT = '%Y-%m-%dT%H:%M' # формат <input type="datetime-local">
 
 def _parse_dt(value):
     try:
