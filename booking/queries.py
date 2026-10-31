@@ -112,3 +112,10 @@ def get_room(room_id):
     if row:
         row['room_points'] = _points(row['room_points'])
     return row
+
+def list_tariffs(room_id):
+    return _all(
+        'SELECT id_tariff, id_room, name, description, unit_price, duration_minutes '
+        'FROM tariff WHERE id_room = %s ORDER BY duration_minutes, unit_price',
+        [room_id],
+    )
