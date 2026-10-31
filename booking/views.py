@@ -182,3 +182,58 @@ def cancel_reserve(request):
         messages.error(request, str(e))
     fallback = 'staff_reserves' if request.user.is_club_admin else 'my_reserves'
     return redirect(_safe_next(request, fallback))
+
+@role_required('admin')
+def staff_reserves(request):
+    return render(request, 'booking/staff/reserves.html', {
+        'reserves': queries.list_reserves(only_active=request.GET.get('all') != '1'),
+        'show_all': request.GET.get('all') == '1',
+    })
+ 
+@require_POST
+@role_required('admin')
+def staff_extend(request):
+    try:
+        queries.extend_booking_item(
+            request.POST.get('item_id'), request.POST.get('units', 1)
+        )
+        messages.success(request, 'Время добавлено.')
+    except ServiceError as e:
+        messages.error(request, str(e))
+    return redirect('staff_reserves')
+ 
+@role_required('admin')
+def staff_accounts(request):
+    return render(request, 'booking/staff/accounts.html', {
+        'accounts': queries.list_accounts(),
+    })
+ 
+@require_POST
+@role_required('admin')
+def staff_set_active(request):
+    active = request.POST.get('active') == '1'
+    try:
+        cancelled = queries.set_account_active(
+            request.POST.get('account_id'), active, request.user
+        )
+        if active:
+            messages.success(request, 'Аккаунт разблокирован.')
+        else:
+            messages.success(
+                request, f'Аккаунт заблокирован. Отменено будущих броней: {cancelled}.'
+            )
+    except ServiceError as e:
+        messages.error(request, str(e))
+    return redirect('staff_accounts')
+ 
+@require_POST
+@role_required('superuser')
+def staff_set_role(request):
+    try:
+        queries.set_account_role(
+            request.POST.get('account_id'), request.POST.get('role'), request.user
+        )
+        messages.success(request, 'Роль изменена.')
+    except ServiceError as e:
+        messages.error(request, str(e))
+    return redirect('staff_accounts')
