@@ -14,6 +14,9 @@ from pathlib import Path
 
 import os
 from dotenv import load_dotenv
+from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -26,6 +29,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured('Задайте SECRET_KEY в файле .env')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -60,7 +65,7 @@ ROOT_URLCONF = 'cyberspot.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -81,11 +86,11 @@ WSGI_APPLICATION = 'cyberspot.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
+        'NAME': os.getenv('DB_NAME', 'cyberspot'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {'charset': 'utf8mb4'},
     }
 }
@@ -119,14 +124,14 @@ TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -143,7 +148,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 AUTH_USER_MODEL = 'booking.User'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 # Правила бронирования
-MAX_BOOKING_DAYS_AHEAD = 7        # N: бронь не дальше чем на N дней вперёд
+MAX_BOOKING_DAYS_AHEAD = 7 # N: бронь не дальше чем на N дней вперёд
+CLIENT_CANCEL_BEFORE_MINUTES = 60 # клиент отменяет не позже чем за час до начала
+MAX_BOOKING_UNITS = 24 # максимум единиц тарифа за одну бронь
 CLIENT_CANCEL_BEFORE_MINUTES = 60 # клиент отменяет не позже чем за час до начала
 # Вход и выход
 LOGIN_URL = 'login'
