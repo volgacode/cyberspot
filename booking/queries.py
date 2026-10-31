@@ -279,10 +279,18 @@ def list_reserves(account_id=None, only_active=False):
     delta = timedelta(minutes=settings.CLIENT_CANCEL_BEFORE_MINUTES)
     for r in reserves:
         r['items'] = by_reserve.get(r['id_reserve'], [])
-        first = r['first_start']
+        first, last = r['first_start'], r['last_end']
         r['can_client_cancel'] = (
             r['status'] == RESERVE_ACTIVE and (first is None or first - now >= delta)
         )
+        if r['status'] == RESERVE_CANCELLED:
+            r['phase'] = 'cancelled'
+        elif first and first > now:
+            r['phase'] = 'upcoming'
+        elif last and last <= now:
+            r['phase'] = 'finished'
+        else:
+            r['phase'] = 'in_progress'
     return reserves
  
 def cancel_reserve(reserve_id, user):
