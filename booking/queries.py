@@ -119,3 +119,32 @@ def list_tariffs(room_id):
         'FROM tariff WHERE id_room = %s ORDER BY duration_minutes, unit_price',
         [room_id],
     )
+
+def room_pcs(room_id, start=None, end=None):
+    """
+    Места зоны. Если передан интервал [start, end) — у каждого места
+    добавляется busy (занято на это время) и bookable.
+    """
+    busy_sql, params = '0', []
+    if start and end:
+        busy_sql = """EXISTS (
+            SELECT 1 FROM reserve_pc_setup x
+            JOIN reserve v ON v.id_reserve = x.id_reserve
+            WHERE x.id_pc_setup = p.id_pc_setup
+              AND v.status = 'active'
+              AND x.start_time < %s AND x.end_time > %s)"""
+        params = [end, start]
+    rows = _all(f"""
+        SELECT p.id_pc_setup, p.id_room, p.pc_setup_number, p.status,
+               p.pos_x, p.pos_y, p.rotation,
+               s.cpu, s.gpu, s.ram, s.monitor, s.mouse, s.keyboard, s.headphones, s.chair,
+               {busy_sql} AS busy
+        FROM pc_setup p
+        JOIN pc_setup_spec s ON s.id_pc_setup_spec = p.id_pc_setup_spec
+        WHERE p.id_room = %s
+        ORDER BY p.pc_setup_number
+    """, params + [room_id])
+    for r in rows:
+        r['busy'] = bool(r['busy'])
+        r['bookable'] = r['status'] == PC_READY and not r['busy']
+    return rows
