@@ -86,3 +86,29 @@ def get_place():
     if row:
         row['place_points'] = _points(row['place_points'])
     return row
+
+def list_rooms():
+    rows = _all("""
+        SELECT r.id_room, r.id_place, r.name, r.view, r.description, r.room_points,
+               COUNT(p.id_pc_setup) AS pc_total,
+               COALESCE(SUM(p.status = 'ready'), 0) AS pc_ready,
+               (SELECT MIN(t.unit_price) FROM tariff t WHERE t.id_room = r.id_room) AS min_price
+        FROM room r
+        LEFT JOIN pc_setup p ON p.id_room = r.id_room
+        GROUP BY r.id_room
+        ORDER BY r.id_room
+    """)
+    for r in rows:
+        r['room_points'] = _points(r['room_points'])
+        r['pc_ready'] = int(r['pc_ready'])
+    return rows
+ 
+ 
+def get_room(room_id):
+    row = _one(
+        'SELECT id_room, id_place, name, view, description, room_points '
+        'FROM room WHERE id_room = %s', [room_id]
+    )
+    if row:
+        row['room_points'] = _points(row['room_points'])
+    return row
