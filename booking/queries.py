@@ -20,7 +20,6 @@ from .models import ROLE_LEVEL
 PC_READY = 'ready'
 PC_NOT_READY = 'not ready'
 RESERVE_ACTIVE = 'active'
-RESERVE_COMPLETED = 'completed'
 RESERVE_CANCELLED = 'cancelled'
  
 PAST_TOLERANCE = timedelta(minutes=5) # допуск «начало в прошлом»
@@ -77,3 +76,13 @@ def _to_int(value, what='значение'):
         return int(value)
     except (TypeError, ValueError):
         raise ServiceError(f'Некорректное {what}.')
+
+def get_place():
+    """Клуб единственный: берём первое помещение."""
+    row = _one(
+        'SELECT id_place, name, view, description, place_points '
+        'FROM place ORDER BY id_place LIMIT 1'
+    )
+    if row:
+        row['place_points'] = _points(row['place_points'])
+    return row
