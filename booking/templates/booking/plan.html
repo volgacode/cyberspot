@@ -1,0 +1,45 @@
+<svg viewBox="0 0 480 400" class="plan w-full h-auto" role="img" aria-label="Схема зала: свободные и занятые места">
+  <style>
+    .plan .hall  { fill: #101a26; stroke: #2a475e; stroke-width: 2; }
+    .plan .room  { fill: #162231; stroke: #2a3b4f; stroke-width: 1.5; }
+    .plan .seat-free { fill: none; stroke: #66c0f4; stroke-width: 1.5; }
+    .plan .seat-busy { fill: #2a475e; stroke: #2a475e; stroke-width: 1.5; }
+    .plan .seat-pick { fill: #66c0f4; }
+    .plan .pick-ring { fill: none; stroke: #66c0f4; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: ring 2.8s ease-out infinite; }
+    @keyframes ring { 0% { opacity: .9; transform: scale(.7); } 70%, 100% { opacity: 0; transform: scale(1.25); } }
+    @media (prefers-reduced-motion: reduce) { .plan .pick-ring { animation: none; opacity: .5; } }
+  </style>
+  <polygon class="hall" points="20,20 460,20 460,250 300,250 300,380 20,380"/>
+  <polygon class="room" points="40,40 250,40 250,190 40,190"/>
+  <polygon class="room" points="270,40 440,40 440,230 270,230"/>
+  <polygon class="room" points="40,210 250,210 250,360 40,360"/>
+    <rect class="seat-free" x="64" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="100" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="136" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="172" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="208" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="64" y="126" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="100" y="126" width="16" height="16" rx="2"/>
+  <rect class="pick-ring" x="131" y="121" width="26" height="26" rx="4"/>
+  <rect class="seat-pick" x="136" y="126" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="172" y="126" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="208" y="126" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="300" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="300" y="110" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="300" y="150" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="300" y="190" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="390" y="70" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="390" y="110" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="390" y="150" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="390" y="190" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="64" y="250" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="100" y="250" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="136" y="250" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="172" y="250" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="208" y="250" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="64" y="306" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="100" y="306" width="16" height="16" rx="2"/>
+  <rect class="seat-busy" x="136" y="306" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="172" y="306" width="16" height="16" rx="2"/>
+  <rect class="seat-free" x="208" y="306" width="16" height="16" rx="2"/>
+</svg>

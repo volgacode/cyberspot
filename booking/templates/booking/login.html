@@ -1,0 +1,68 @@
+{% extends "booking/base.html" %}
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-[1fr_400px] gap-10 lg:gap-14 items-center">
+
+  <section class="hidden lg:block" aria-hidden="false">
+    <div class="bg-panel border border-line rounded-[3px] p-6">
+      {% include "booking/plan.html" %}
+    </div>
+    <p class="mt-4 text-sm text-mute max-w-md">Бронируйте место на плане зала: свободные ПК обведены, занятые закрашены.</p>
+  </section>
+
+  <section class="bg-panel border border-line rounded-[3px] p-6 sm:p-8">
+    <h1 class="text-2xl font-medium text-white">Вход</h1>
+
+    {% if error %}
+    <div role="alert" class="mt-5 border border-alert/50 bg-alert/10 text-[#f0a899] text-sm rounded-[3px] px-3 py-2.5">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}" class="mt-6 space-y-5" novalidate="novalidate">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+
+      <div>
+        <label for="id_username" class="block text-sm text-mute mb-1.5">Логин</label>
+        <input id="id_username" name="username" type="text" value="{{ username }}"
+               required="required" autofocus="autofocus" autocomplete="username"
+               autocapitalize="none" spellcheck="false" maxlength="150"
+               class="w-full bg-inset border border-line rounded-[3px] px-3 py-2.5 text-white placeholder-mute focus:outline-none focus:border-sky focus:ring-1 focus:ring-sky" />
+      </div>
+
+      <div>
+        <label for="id_password" class="block text-sm text-mute mb-1.5">Пароль</label>
+        <div class="relative">
+          <input id="id_password" name="password" type="password"
+                 required="required" autocomplete="current-password"
+                 class="w-full bg-inset border border-line rounded-[3px] pl-3 pr-24 py-2.5 text-white focus:outline-none focus:border-sky focus:ring-1 focus:ring-sky" />
+          <button type="button" data-toggle-password="id_password" aria-pressed="false"
+                  class="absolute inset-y-0 right-0 px-3 text-sm text-mute hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky">Показать</button>
+        </div>
+      </div>
+
+      <button type="submit"
+              class="w-full rounded-[3px] py-2.5 font-medium text-white bg-gradient-to-r from-[#06bfff] to-[#2d73ff] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky">
+        Войти
+      </button>
+    </form>
+
+    <p class="mt-6 text-sm text-mute">
+      Нет аккаунта?
+      <a href="{% url 'register' %}" class="text-sky hover:text-white underline-offset-4 hover:underline">Зарегистрироваться</a>
+    </p>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.dataset.togglePassword);
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Скрыть' : 'Показать';
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    });
+  });
+</script>
+{% endblock %}
