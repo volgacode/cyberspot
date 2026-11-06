@@ -83,7 +83,8 @@ DB_PASSWORD=ваш_пароль_от_mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 ```
-
+Cоздание ключа:
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ---
 
 ### 6. Развертывание базы данных и данных
@@ -109,13 +110,14 @@ DB_PORT=3306
 
 ---
 
-### 7. Создание администратора клуба
+### 7. Создание суперпользователя клуба
 
 Создайте учетную запись суперпользователя для доступа к панели управления:
 ```bash
-python manage.py createsuperuser
+python manage.py shell
+from booking.queries import register_account
+register_account('boss', 'надёжный_пароль', role='superuser')
 ```
-*Введите логин и пароль (поле email можно пропустить, нажав `Enter`).*
 
 ---
 
