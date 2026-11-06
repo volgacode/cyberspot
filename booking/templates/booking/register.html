@@ -1,0 +1,91 @@
+{% extends "booking/base.html" %}
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-[1fr_400px] gap-10 lg:gap-14 items-center">
+
+  <section class="hidden lg:block">
+    <div class="bg-panel border border-line rounded-[3px] p-6">
+      {% include "booking/plan.html" %}
+    </div>
+    <p class="mt-4 text-sm text-mute max-w-md">Аккаунт нужен, чтобы бронировать места и отменять свои брони.</p>
+  </section>
+
+  <section class="bg-panel border border-line rounded-[3px] p-6 sm:p-8">
+    <h1 class="text-2xl font-medium text-white">Создание аккаунта</h1>
+
+    {% if error %}
+    <div role="alert" class="mt-5 border border-alert/50 bg-alert/10 text-[#f0a899] text-sm rounded-[3px] px-3 py-2.5">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'register' %}" class="mt-6 space-y-5" novalidate="novalidate">
+      {% csrf_token %}
+
+      <div>
+        <label for="id_username" class="block text-sm text-mute mb-1.5">Логин</label>
+        <input id="id_username" name="username" type="text" value="{{ username }}"
+               required="required" autofocus="autofocus" autocomplete="username"
+               autocapitalize="none" spellcheck="false" minlength="3" maxlength="150"
+               aria-describedby="hint_username"
+               class="w-full bg-inset border border-line rounded-[3px] px-3 py-2.5 text-white focus:outline-none focus:border-sky focus:ring-1 focus:ring-sky" />
+        <p id="hint_username" class="mt-1.5 text-xs text-mute">От 3 символов: буквы, цифры и . @ + - _</p>
+      </div>
+
+      <div>
+        <label for="id_password" class="block text-sm text-mute mb-1.5">Пароль</label>
+        <div class="relative">
+          <input id="id_password" name="password" type="password"
+                 required="required" autocomplete="new-password" minlength="8"
+                 aria-describedby="hint_password"
+                 class="w-full bg-inset border border-line rounded-[3px] pl-3 pr-24 py-2.5 text-white focus:outline-none focus:border-sky focus:ring-1 focus:ring-sky" />
+          <button type="button" data-toggle-password="id_password" aria-pressed="false"
+                  class="absolute inset-y-0 right-0 px-3 text-sm text-mute hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky">Показать</button>
+        </div>
+        <p id="hint_password" class="mt-1.5 text-xs text-mute">Не короче 8 символов, не только цифры, не из списка популярных паролей.</p>
+      </div>
+
+      <div>
+        <label for="id_password2" class="block text-sm text-mute mb-1.5">Повторите пароль</label>
+        <input id="id_password2" name="password2" type="password"
+               required="required" autocomplete="new-password"
+               class="w-full bg-inset border border-line rounded-[3px] px-3 py-2.5 text-white focus:outline-none focus:border-sky focus:ring-1 focus:ring-sky" />
+        <p id="match_msg" class="mt-1.5 text-xs text-alert hidden" aria-live="polite">Пароли не совпадают.</p>
+      </div>
+
+      <button type="submit"
+              class="w-full rounded-[3px] py-2.5 font-medium text-white bg-gradient-to-r from-[#06bfff] to-[#2d73ff] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky">
+        Создать аккаунт
+      </button>
+    </form>
+
+    <p class="mt-6 text-sm text-mute">
+      Уже есть аккаунт?
+      <a href="{% url 'login' %}" class="text-sky hover:text-white underline-offset-4 hover:underline">Войти</a>
+    </p>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.dataset.togglePassword);
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Скрыть' : 'Показать';
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    });
+  });
+
+  // Подсказка о несовпадении паролей (окончательная проверка — на сервере)
+  (function () {
+    var p1 = document.getElementById('id_password');
+    var p2 = document.getElementById('id_password2');
+    var msg = document.getElementById('match_msg');
+    function check() {
+      msg.classList.toggle('hidden', !p2.value || p1.value === p2.value);
+    }
+    p1.addEventListener('input', check);
+    p2.addEventListener('input', check);
+  })();
+</script>
+{% endblock %}

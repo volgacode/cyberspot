@@ -1,0 +1,76 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ru" class="bg-night">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}CyberSpot{% endblock %} — CyberSpot</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;display=swap" />
+
+  <!-- Tailwind через Play CDN: удобно для разработки. Для продакшена см. README (standalone CLI). -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink:   '#171a21',  // шапка
+            night: '#1b2838',  // фон страницы
+            panel: '#16202d',  // карточки
+            inset: '#0f1722',  // поля ввода
+            line:  '#2a3b4f',  // границы
+            steel: '#2a475e',
+            sky:   '#66c0f4',  // акцент
+            skyhi: '#1a9fff',
+            fog:   '#c7d5e0',  // основной текст
+            mute:  '#8f98a0',  // вторичный текст
+            alert: '#e0654d'
+          },
+          fontFamily: {
+            sans: ['"Golos Text"', '"Segoe UI"', '"Helvetica Neue"', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-screen bg-night font-sans text-fog antialiased flex flex-col">
+
+  <header class="bg-ink border-b border-black/40">
+    <div class="mx-auto max-w-5xl h-14 px-4 flex items-center justify-between">
+      <a href="{% url 'home' %}" class="flex items-center gap-2.5 text-white font-semibold tracking-tight">
+        <span class="grid grid-cols-2 gap-[3px]" aria-hidden="true">
+          <i class="block w-[7px] h-[7px] bg-sky"></i><i class="block w-[7px] h-[7px] bg-steel"></i>
+          <i class="block w-[7px] h-[7px] bg-steel"></i><i class="block w-[7px] h-[7px] bg-sky"></i>
+        </span>
+        CyberSpot
+      </a>
+
+      {% if user.is_authenticated %}
+      <div class="flex items-center gap-4 text-sm">
+        <span class="text-mute">{{ user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="text-fog hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky">Выйти</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:py-14">
+    {% if messages %}
+    <ul class="mb-6 space-y-2" role="status">
+      {% for message in messages %}
+      <li class="rounded-[3px] border px-4 py-2.5 text-sm {% if message.tags == 'error' %}border-alert/50 bg-alert/10 text-[#f0a899]{% else %}border-sky/40 bg-sky/10 text-sky{% endif %}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>

@@ -67,7 +67,7 @@ def register_view(request):
             user = authenticate(request, username=username, password=password)
             login(request, user)
             return redirect('zones')
-    return render(request, 'booking/register.html', {'error': error, 'username': username})
+    return render(request, 'booking/templates/booking/register.html', {'error': error, 'username': username})
  
 def login_view(request):
     if request.user.is_authenticated:
@@ -128,7 +128,7 @@ def zone_detail(request, room_id):
         end = start + timedelta(minutes=tariff['duration_minutes'] * units)
  
     now = timezone.now()
-    return render(request, 'booking/zone_detail.html', {
+    return render(request, 'booking/templates/booking/zone_detail.html', {
         'place': queries.get_place(),
         'room': room,
         'tariffs': tariffs,
@@ -167,7 +167,7 @@ def book(request):
  
 @role_required('client')
 def my_reserves(request):
-    return render(request, 'booking/my_reserves.html', {
+    return render(request, 'booking/templates/booking/my_reserves.html', {
         'reserves': queries.list_reserves(account_id=request.user.id),
     })
  
@@ -185,7 +185,7 @@ def cancel_reserve(request):
 
 @role_required('admin')
 def staff_reserves(request):
-    return render(request, 'booking/staff/reserves.html', {
+    return render(request, 'booking/templates/booking/staff/reserves.html', {
         'reserves': queries.list_reserves(only_active=request.GET.get('all') != '1'),
         'show_all': request.GET.get('all') == '1',
     })
@@ -204,7 +204,7 @@ def staff_extend(request):
  
 @role_required('admin')
 def staff_accounts(request):
-    return render(request, 'booking/staff/accounts.html', {
+    return render(request, 'booking/templates/booking/staff/accounts.html', {
         'accounts': queries.list_accounts(),
     })
  
@@ -240,7 +240,7 @@ def staff_set_role(request):
 
 @role_required('superuser')
 def editor(request):
-    return render(request, 'booking/editor.html', {
+    return render(request, 'booking/templates/booking/editor.html', {
         'place': queries.get_place(),
         'rooms': queries.list_rooms(),
         'pcs': queries.list_all_pcs(),
@@ -304,3 +304,25 @@ def api_spec_create(data):
     return {'id': queries.create_spec(
         data['cpu'], data['gpu'], data['ram'], data['monitor'],
         data.get('mouse'), data.get('keyboard'), data.get('headphones'), data.get('chair'))}
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('zones')
+    error, username = None, ''
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        try:
+            if password != request.POST.get('password2', ''):
+                raise ServiceError('Пароли не совпадают.')
+            validate_password(password)
+            queries.register_account(username, password)
+        except ValidationError as e:
+            error = ' '.join(e.messages)
+        except ServiceError as e:
+            error = str(e)
+        else:
+            user = authenticate(request, username=username, password=password)
+            login(request, user)
+            return redirect('zones')
+    return render(request, 'booking/register.html', {'error': error, 'username': username})
