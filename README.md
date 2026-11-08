@@ -84,7 +84,10 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 ```
 Cоздание ключа:
+```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
 ---
 
 ### 6. Развертывание базы данных и данных
