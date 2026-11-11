@@ -1,14 +1,14 @@
 {% extends "booking/base.html" %}
+{% load static %}
 {% block title %}Регистрация{% endblock %}
 
 {% block content %}
 <div class="grid lg:grid-cols-[1fr_400px] gap-10 lg:gap-14 items-center">
 
   <section class="hidden lg:block">
-    <div class="bg-panel border border-line rounded-[3px] p-6">
-      {% include "booking/plan.html" %}
-    </div>
-    <p class="mt-4 text-sm text-mute max-w-md">Аккаунт нужен, чтобы бронировать места и отменять свои брони.</p>
+    <img src="{% static 'booking/img/cyberspot-logo.png' %}"
+         alt="Логотип компьютерного клуба CyberSpot"
+         class="w-full h-auto" />
   </section>
 
   <section class="bg-panel border border-line rounded-[3px] p-6 sm:p-8">
