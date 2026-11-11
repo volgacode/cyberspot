@@ -49,26 +49,6 @@ def _json_body(request):
 def home(request):
     return redirect('zones' if request.user.is_authenticated else 'login')
  
-def register_view(request):
-    if request.user.is_authenticated:
-        return redirect('zones')
-    error, username = None, ''
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        try:
-            validate_password(password)
-            queries.register_account(username, password)
-        except ValidationError as e:
-            error = ' '.join(e.messages)
-        except ServiceError as e:
-            error = str(e)
-        else:
-            user = authenticate(request, username=username, password=password)
-            login(request, user)
-            return redirect('zones')
-    return render(request, 'booking/templates/booking/register.html', {'error': error, 'username': username})
- 
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('zones')
