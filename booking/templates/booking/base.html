@@ -1,5 +1,5 @@
 {% load static %}<!DOCTYPE html>
-<html lang="ru" class="bg-night">
+<html lang="ru" class="bg-night [scrollbar-width:thin] [scrollbar-color:#2a475e_#1b2838] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-night [&::-webkit-scrollbar-thumb]:bg-steel [&::-webkit-scrollbar-thumb]:rounded-[5px] [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-night [&::-webkit-scrollbar-thumb:hover]:bg-sky">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -30,6 +30,20 @@
           },
           fontFamily: {
             sans: ['"Golos Text"', '"Segoe UI"', '"Helvetica Neue"', 'Arial', 'sans-serif']
+          },
+          keyframes: {
+            'acc-in':    { from: { opacity: '0', transform: 'translateY(14px)' }, to: { opacity: '1', transform: 'none' } },
+            'acc-pulse': { '0%, 100%': { opacity: '.5' }, '50%': { opacity: '1' } },
+            'acc-fade':  { from: { opacity: '0' }, to: { opacity: '1' } },
+            'acc-pop':   { from: { opacity: '0', transform: 'translateY(10px) scale(.97)' }, to: { opacity: '1', transform: 'none' } },
+            'acc-ring':  { '0%': { opacity: '.9', transform: 'scale(.7)' }, '70%, 100%': { opacity: '0', transform: 'scale(1.25)' } }
+          },
+          animation: {
+            'acc-in':    'acc-in .5s cubic-bezier(.2,.7,.2,1) both',
+            'acc-pulse': 'acc-pulse 3.6s ease-in-out infinite',
+            'acc-fade':  'acc-fade .2s ease both',
+            'acc-pop':   'acc-pop .22s cubic-bezier(.2,.7,.2,1) both',
+            'acc-ring':  'acc-ring 2.8s ease-out infinite'
           }
         }
       }

@@ -45,7 +45,7 @@
       lastFocus = document.activeElement;
       modal.hidden = false;
       document.body.style.overflow = 'hidden';
-      var cancel = modal.querySelector('[data-close].btn-outline');
+      var cancel = modal.querySelector('[data-autofocus]');
       if (cancel) cancel.focus();
     });
     modal.querySelectorAll('[data-close]').forEach(function (el) {
