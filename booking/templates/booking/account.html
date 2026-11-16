@@ -3,45 +3,46 @@
 {% block title %}Профиль{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'booking/css/account.css' %}" />
 <script src="{% static 'booking/js/account.js' %}" defer></script>
 
-<div class="account-ambient" aria-hidden="true"></div>
+<div class="[&_:focus-visible]:outline [&_:focus-visible]:outline-2 [&_:focus-visible]:outline-sky [&_:focus-visible]:outline-offset-2">
 
-<div class="relative mx-auto max-w-2xl account-enter">
+<div class="fixed inset-0 pointer-events-none z-0 bg-[image:radial-gradient(600px_320px_at_20%_0%,rgba(102,192,244,.10),transparent_70%),radial-gradient(520px_300px_at_85%_20%,rgba(26,159,255,.08),transparent_70%),radial-gradient(700px_400px_at_50%_110%,rgba(42,71,94,.25),transparent_70%)]" aria-hidden="true"></div>
 
-  <section class="account-card bg-panel border border-line rounded-[6px] p-6 sm:p-10">
+<div class="relative mx-auto max-w-2xl animate-acc-in motion-reduce:animate-none">
+
+  <section class="relative shadow-[0_20px_60px_rgba(0,0,0,.35)] bg-panel border border-line rounded-[6px] p-6 sm:p-10">
     <div class="flex items-center justify-between gap-4">
       <span class="text-xs uppercase tracking-[0.2em] text-mute">Личный кабинет</span>
-      <span class="role-badge">{{ user.get_role_display }}</span>
+      <span class="text-[11px] tracking-[.12em] uppercase text-sky border border-sky/40 bg-sky/[.08] px-2.5 py-1 rounded-full">{{ user.get_role_display }}</span>
     </div>
 
     <div class="mt-8 flex flex-col items-center text-center">
-      <div id="avatar-drop" class="avatar-ring">
+      <div class="relative w-[132px] h-[132px] rounded-full p-1 bg-[image:linear-gradient(140deg,#66c0f4,#2a475e_60%,#1a9fff)]">
         {% if user.avatar %}
-        <img id="avatar-img" src="{% get_media_prefix %}{{ user.avatar }}" alt=""
+        <img src="{% get_media_prefix %}{{ user.avatar }}" alt="" class="block w-full h-full rounded-full object-cover bg-inset border-[3px] border-panel"
              onerror="this.style.display='none';var f=document.getElementById('avatar-fallback');if(f)f.style.display='';"
              onload="this.style.display='';var f=document.getElementById('avatar-fallback');if(f)f.style.display='none';" />
-        <span id="avatar-fallback" class="avatar-fallback" style="display:none">{{ user.username|first|upper }}</span>
+        <span id="avatar-fallback" class="w-full h-full rounded-full grid place-items-center text-[44px] font-semibold text-sky border-[3px] border-panel bg-[image:linear-gradient(160deg,#2a475e,#0f1722)]" style="display:none">{{ user.username|first|upper }}</span>
         {% else %}
-        <span id="avatar-img" class="avatar-fallback">{{ user.username|first|upper }}</span>
+        <span class="w-full h-full rounded-full grid place-items-center text-[44px] font-semibold text-sky border-[3px] border-panel bg-[image:linear-gradient(160deg,#2a475e,#0f1722)]">{{ user.username|first|upper }}</span>
         {% endif %}
-        <span class="avatar-glow" aria-hidden="true"></span>
+        <span class="absolute -inset-[14px] rounded-full pointer-events-none bg-[image:radial-gradient(circle,rgba(102,192,244,.22),transparent_70%)] animate-acc-pulse motion-reduce:animate-none" aria-hidden="true"></span>
       </div>
 
       <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
         <form id="avatar-form" method="post" enctype="multipart/form-data"
               action="{% url 'avatar_upload' %}" class="flex items-center gap-2">
           {% csrf_token %}
-          <input type="file" id="avatar-input" name="avatar" class="sr-only"
+          <input type="file" id="avatar-input" name="avatar" class="sr-only peer"
                  accept="image/png,image/jpeg,image/webp,image/gif" />
-          <label for="avatar-input" class="btn-small btn-solid">Загрузить аватар</label>
-          <noscript><button type="submit" class="btn-small btn-outline">Сохранить</button></noscript>
+          <label for="avatar-input" class="inline-flex items-center gap-1.5 cursor-pointer text-[13px] px-3.5 py-[7px] rounded-[4px] border transition duration-150 active:translate-y-px motion-reduce:transition-none border-transparent bg-[image:linear-gradient(90deg,#06bfff,#2d73ff)] text-white font-medium hover:brightness-[1.12] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-sky peer-focus-visible:outline-offset-2">Загрузить аватар</label>
+          <noscript><button type="submit" class="inline-flex items-center gap-1.5 cursor-pointer text-[13px] px-3.5 py-[7px] rounded-[4px] border transition duration-150 active:translate-y-px motion-reduce:transition-none border-line text-fog bg-inset hover:border-sky hover:text-white">Сохранить</button></noscript>
         </form>
         {% if user.avatar %}
         <form method="post" action="{% url 'avatar_remove' %}">
           {% csrf_token %}
-          <button type="submit" class="btn-small btn-ghost">Убрать аватар</button>
+          <button type="submit" class="inline-flex items-center gap-1.5 cursor-pointer text-[13px] px-3.5 py-[7px] rounded-[4px] border transition duration-150 active:translate-y-px motion-reduce:transition-none border-transparent text-mute bg-transparent hover:text-alert">Убрать аватар</button>
         </form>
         {% endif %}
       </div>
@@ -52,24 +53,24 @@
     </div>
 
     <div class="mt-8 grid grid-cols-2 gap-3">
-      <div class="stat-tile">
-        <span class="stat-value text-sky">{{ active_count }}</span>
-        <span class="stat-label">Активные брони</span>
+      <div class="flex flex-col gap-0.5 items-center text-center bg-inset border border-line rounded-[6px] px-2.5 py-3.5 transition duration-150 hover:border-steel hover:-translate-y-0.5 motion-reduce:transition-none">
+        <span class="text-xl font-semibold text-sky">{{ active_count }}</span>
+        <span class="text-[11px] text-mute tracking-[.06em] uppercase">Активные брони</span>
       </div>
-      <div class="stat-tile">
-        <span class="stat-value text-fog">#{{ user.id }}</span>
-        <span class="stat-label">Номер аккаунта</span>
+      <div class="flex flex-col gap-0.5 items-center text-center bg-inset border border-line rounded-[6px] px-2.5 py-3.5 transition duration-150 hover:border-steel hover:-translate-y-0.5 motion-reduce:transition-none">
+        <span class="text-xl font-semibold text-fog">#{{ user.id }}</span>
+        <span class="text-[11px] text-mute tracking-[.06em] uppercase">Номер аккаунта</span>
       </div>
     </div>
 
     <div class="mt-8 flex justify-center">
-      <a href="{% url 'my_reserves' %}" class="btn-small btn-outline">Мои брони →</a>
+      <a href="{% url 'my_reserves' %}" class="inline-flex items-center gap-1.5 cursor-pointer text-[13px] px-3.5 py-[7px] rounded-[4px] border transition duration-150 active:translate-y-px motion-reduce:transition-none border-line text-fog bg-inset hover:border-sky hover:text-white">Мои брони →</a>
     </div>
   </section>
 
-  <section class="danger-zone mt-10 border-t border-line pt-8 pb-4">
+  <section class="relative mt-10 border-t border-line pt-8 pb-4">
     <h2 class="text-sm font-semibold text-alert uppercase tracking-[0.15em]">Опасная зона</h2>
-    <button type="button" id="open-delete" class="btn-danger mt-4">Удалить аккаунт</button>
+    <button type="button" id="open-delete" class="inline-flex items-center cursor-pointer text-sm font-medium px-[18px] py-2.5 rounded-[4px] text-[#ffd9d2] bg-alert/[.12] border border-alert/50 transition duration-150 hover:bg-alert/[.22] hover:shadow-[0_6px_22px_rgba(224,101,77,.25)] active:translate-y-px motion-reduce:transition-none mt-4">Удалить аккаунт</button>
   </section>
 </div>
 
@@ -77,14 +78,16 @@
   {% csrf_token %}
 </form>
 
-<div id="delete-modal" class="modal" hidden>
-  <div class="modal-backdrop" data-close></div>
-  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+<div id="delete-modal" class="fixed inset-0 z-[60] grid place-items-center p-4 [&[hidden]]:hidden" hidden>
+  <div class="absolute inset-0 bg-[rgba(10,14,20,.72)] backdrop-blur-[3px] animate-acc-fade motion-reduce:animate-none" data-close></div>
+  <div class="relative w-full max-w-[420px] bg-panel border border-line rounded-lg p-6 shadow-[0_30px_80px_rgba(0,0,0,.5)] animate-acc-pop motion-reduce:animate-none" role="dialog" aria-modal="true" aria-labelledby="delete-title">
     <h2 id="delete-title" class="text-lg font-semibold text-white">Удалить аккаунт?</h2>
     <div class="mt-6 flex justify-end gap-2">
-      <button type="button" class="btn-small btn-outline" data-close>Отмена</button>
-      <button type="submit" form="delete-form" class="btn-small btn-danger">Удалить навсегда</button>
+      <button type="button" class="inline-flex items-center gap-1.5 cursor-pointer text-[13px] px-3.5 py-[7px] rounded-[4px] border transition duration-150 active:translate-y-px motion-reduce:transition-none border-line text-fog bg-inset hover:border-sky hover:text-white" data-close data-autofocus>Отмена</button>
+      <button type="submit" form="delete-form" class="inline-flex items-center cursor-pointer text-sm font-medium px-[18px] py-2.5 rounded-[4px] text-[#ffd9d2] bg-alert/[.12] border border-alert/50 transition duration-150 hover:bg-alert/[.22] hover:shadow-[0_6px_22px_rgba(224,101,77,.25)] active:translate-y-px motion-reduce:transition-none">Удалить навсегда</button>
     </div>
   </div>
+</div>
+
 </div>
 {% endblock %}
