@@ -1,0 +1,90 @@
+{% extends "booking/base.html" %}
+{% load static %}
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'booking/css/account.css' %}" />
+<script src="{% static 'booking/js/account.js' %}" defer></script>
+
+<div class="account-ambient" aria-hidden="true"></div>
+
+<div class="relative mx-auto max-w-2xl account-enter">
+
+  <section class="account-card bg-panel border border-line rounded-[6px] p-6 sm:p-10">
+    <div class="flex items-center justify-between gap-4">
+      <span class="text-xs uppercase tracking-[0.2em] text-mute">Личный кабинет</span>
+      <span class="role-badge">{{ user.get_role_display }}</span>
+    </div>
+
+    <div class="mt-8 flex flex-col items-center text-center">
+      <div id="avatar-drop" class="avatar-ring">
+        {% if user.avatar %}
+        <img id="avatar-img" src="{% get_media_prefix %}{{ user.avatar }}" alt=""
+             onerror="this.style.display='none';var f=document.getElementById('avatar-fallback');if(f)f.style.display='';"
+             onload="this.style.display='';var f=document.getElementById('avatar-fallback');if(f)f.style.display='none';" />
+        <span id="avatar-fallback" class="avatar-fallback" style="display:none">{{ user.username|first|upper }}</span>
+        {% else %}
+        <span id="avatar-img" class="avatar-fallback">{{ user.username|first|upper }}</span>
+        {% endif %}
+        <span class="avatar-glow" aria-hidden="true"></span>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <form id="avatar-form" method="post" enctype="multipart/form-data"
+              action="{% url 'avatar_upload' %}" class="flex items-center gap-2">
+          {% csrf_token %}
+          <input type="file" id="avatar-input" name="avatar" class="sr-only"
+                 accept="image/png,image/jpeg,image/webp,image/gif" />
+          <label for="avatar-input" class="btn-small btn-solid">Загрузить аватар</label>
+          <noscript><button type="submit" class="btn-small btn-outline">Сохранить</button></noscript>
+        </form>
+        {% if user.avatar %}
+        <form method="post" action="{% url 'avatar_remove' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-small btn-ghost">Убрать аватар</button>
+        </form>
+        {% endif %}
+      </div>
+      <p id="avatar-error" class="mt-2 text-xs text-alert" role="alert" hidden></p>
+
+      <h1 class="mt-6 text-3xl font-semibold text-white tracking-tight">{{ user.username }}</h1>
+      <p class="mt-1 text-sm text-mute">В клубе с {{ user.date_joined|date:"d.m.Y" }}</p>
+    </div>
+
+    <div class="mt-8 grid grid-cols-2 gap-3">
+      <div class="stat-tile">
+        <span class="stat-value text-sky">{{ active_count }}</span>
+        <span class="stat-label">Активные брони</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-value text-fog">#{{ user.id }}</span>
+        <span class="stat-label">Номер аккаунта</span>
+      </div>
+    </div>
+
+    <div class="mt-8 flex justify-center">
+      <a href="{% url 'my_reserves' %}" class="btn-small btn-outline">Мои брони →</a>
+    </div>
+  </section>
+
+  <section class="danger-zone mt-10 border-t border-line pt-8 pb-4">
+    <h2 class="text-sm font-semibold text-alert uppercase tracking-[0.15em]">Опасная зона</h2>
+    <button type="button" id="open-delete" class="btn-danger mt-4">Удалить аккаунт</button>
+  </section>
+</div>
+
+<form id="delete-form" method="post" action="{% url 'delete_account' %}" class="hidden">
+  {% csrf_token %}
+</form>
+
+<div id="delete-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <h2 id="delete-title" class="text-lg font-semibold text-white">Удалить аккаунт?</h2>
+    <div class="mt-6 flex justify-end gap-2">
+      <button type="button" class="btn-small btn-outline" data-close>Отмена</button>
+      <button type="submit" form="delete-form" class="btn-small btn-danger">Удалить навсегда</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -9,23 +9,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;display=swap" />
 
-  <!-- Tailwind через Play CDN: удобно для разработки. Для продакшена см. README (standalone CLI). -->
+  <!-- Tailwind через Play CDN -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            ink:   '#171a21',  // шапка
-            night: '#1b2838',  // фон страницы
-            panel: '#16202d',  // карточки
-            inset: '#0f1722',  // поля ввода
-            line:  '#2a3b4f',  // границы
+            ink:   '#171a21',
+            night: '#1b2838',
+            panel: '#16202d',
+            inset: '#0f1722',
+            line:  '#2a3b4f',
             steel: '#2a475e',
-            sky:   '#66c0f4',  // акцент
+            sky:   '#66c0f4',
             skyhi: '#1a9fff',
-            fog:   '#c7d5e0',  // основной текст
-            mute:  '#8f98a0',  // вторичный текст
+            fog:   '#c7d5e0',
+            mute:  '#8f98a0',
             alert: '#e0654d'
           },
           fontFamily: {
@@ -50,7 +50,17 @@
 
       {% if user.is_authenticated %}
       <div class="flex items-center gap-4 text-sm">
-        <span class="text-mute">{{ user.username }}</span>
+        <a href="{% url 'account' %}" class="flex items-center gap-2 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky rounded-[3px]">
+          {% if user.avatar %}
+          <img src="{% get_media_prefix %}{{ user.avatar }}" alt=""
+               class="w-7 h-7 rounded-full object-cover border border-line"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+          <span class="grid place-items-center w-7 h-7 rounded-full bg-steel text-sky text-xs font-semibold" style="display:none">{{ user.username|first|upper }}</span>
+          {% else %}
+          <span class="grid place-items-center w-7 h-7 rounded-full bg-steel text-sky text-xs font-semibold">{{ user.username|first|upper }}</span>
+          {% endif %}
+          <span class="text-mute">{{ user.username }}</span>
+        </a>
         <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}
           <button type="submit" class="text-fog hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky">Выйти</button>
