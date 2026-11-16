@@ -17,12 +17,6 @@ ROLE_LEVEL = {'client': 1, 'admin': 2, 'superuser': 3}
 class UserManager(BaseUserManager):
     """get_by_natural_key приходит из BaseUserManager (нужен ModelBackend)."""
 
-    def create_user(self, username, password, role='client', **extra):
-        user = self.model(username=username, role=role, **extra)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
 
 class User(AbstractBaseUser):
     class Role(models.TextChoices):

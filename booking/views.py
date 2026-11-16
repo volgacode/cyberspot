@@ -46,12 +46,19 @@ def _json_body(request):
         raise ServiceError('Ожидался JSON-объект.')
     return data
 
+def _landing(user):
+    """Куда вести после входа, регистрации и с главной страницы — всех в профиль.
+    Когда у персонала появится своя страница (сейчас staff-шаблоны пустые),
+    вернуть: 'staff_reserves' if user.is_club_admin else 'account'."""
+    return 'account'
+
+
 def home(request):
-    return redirect('zones' if request.user.is_authenticated else 'login')
+    return redirect(_landing(request.user) if request.user.is_authenticated else 'login')
  
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('zones')
+        return redirect(_landing(request.user))
     error, username = None, ''
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -62,7 +69,7 @@ def login_view(request):
             error = 'Неверный логин или пароль, либо аккаунт заблокирован.'
         else:
             login(request, user)
-            return redirect(_safe_next(request, 'zones'))
+            return redirect(_safe_next(request, _landing(user)))
     return render(request, 'booking/login.html', {
         'error': error, 'username': username, 'next': request.GET.get('next', ''),
     })
@@ -79,7 +86,7 @@ def delete_account(request):
         queries.delete_own_account(request.user)
     except ServiceError as e:
         messages.error(request, str(e))
-        return redirect('my_reserves')
+        return redirect('account')
     logout(request)
     return redirect('login')
 
@@ -108,7 +115,7 @@ def zone_detail(request, room_id):
         end = start + timedelta(minutes=tariff['duration_minutes'] * units)
  
     now = timezone.now()
-    return render(request, 'booking/templates/booking/zone_detail.html', {
+    return render(request, 'booking/zone_detail.html', {
         'place': queries.get_place(),
         'room': room,
         'tariffs': tariffs,
@@ -147,7 +154,7 @@ def book(request):
  
 @role_required('client')
 def my_reserves(request):
-    return render(request, 'booking/templates/booking/my_reserves.html', {
+    return render(request, 'booking/my_reserves.html', {
         'reserves': queries.list_reserves(account_id=request.user.id),
     })
  
@@ -165,7 +172,7 @@ def cancel_reserve(request):
 
 @role_required('admin')
 def staff_reserves(request):
-    return render(request, 'booking/templates/booking/staff/reserves.html', {
+    return render(request, 'booking/staff/reserves.html', {
         'reserves': queries.list_reserves(only_active=request.GET.get('all') != '1'),
         'show_all': request.GET.get('all') == '1',
     })
@@ -184,7 +191,7 @@ def staff_extend(request):
  
 @role_required('admin')
 def staff_accounts(request):
-    return render(request, 'booking/templates/booking/staff/accounts.html', {
+    return render(request, 'booking/staff/accounts.html', {
         'accounts': queries.list_accounts(),
     })
  
@@ -220,7 +227,7 @@ def staff_set_role(request):
 
 @role_required('superuser')
 def editor(request):
-    return render(request, 'booking/templates/booking/editor.html', {
+    return render(request, 'booking/editor.html', {
         'place': queries.get_place(),
         'rooms': queries.list_rooms(),
         'pcs': queries.list_all_pcs(),
@@ -287,7 +294,7 @@ def api_spec_create(data):
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('zones')
+        return redirect(_landing(request.user))
     error, username = None, ''
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -304,5 +311,32 @@ def register_view(request):
         else:
             user = authenticate(request, username=username, password=password)
             login(request, user)
-            return redirect('zones')
+            return redirect(_landing(user))
     return render(request, 'booking/register.html', {'error': error, 'username': username})
+
+@role_required('client')
+def account(request):
+    reserves = queries.list_reserves(account_id=request.user.id, only_active=True)
+    return render(request, 'booking/account.html', {
+        'active_count': len(reserves),
+        'avatar_max_mb': queries.AVATAR_MAX_BYTES // (1024 * 1024),
+    })
+
+
+@require_POST
+@role_required('client')
+def avatar_upload(request):
+    try:
+        queries.set_avatar(request.user, request.FILES.get('avatar'))
+        messages.success(request, 'Аватар обновлён.')
+    except ServiceError as e:
+        messages.error(request, str(e))
+    return redirect('account')
+
+
+@require_POST
+@role_required('client')
+def avatar_remove(request):
+    queries.remove_avatar(request.user)
+    messages.success(request, 'Аватар удалён.')
+    return redirect('account')

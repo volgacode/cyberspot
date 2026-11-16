@@ -7,6 +7,9 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('account/', views.account, name='account'),
+    path('account/avatar/', views.avatar_upload, name='avatar_upload'),
+    path('account/avatar/remove/', views.avatar_remove, name='avatar_remove'),
     path('account/delete/', views.delete_account, name='delete_account'),
     # клиент
     path('zones/', views.zones, name='zones'),

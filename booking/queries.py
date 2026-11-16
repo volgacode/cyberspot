@@ -4,6 +4,9 @@
 Время везде наивное (USE_TZ = False): Python и MySQL работают с одним
 локальным временем клуба.
 """
+
+import os
+import uuid
 import json
 import re
 from datetime import datetime, timedelta
@@ -400,7 +403,7 @@ def register_account(username, password, role='client'):
  
 def list_accounts():
     return _all(
-        'SELECT id_account, username, role, is_active, date_joined, first_name, last_name '
+        'SELECT id_account, username, role, is_active, date_joined, first_name, last_name, avatar '
         'FROM account ORDER BY id_account'
     )
  
@@ -440,10 +443,6 @@ def set_account_role(account_id, role, actor):
             raise ServiceError('Аккаунт не найден.')
  
 def delete_own_account(user):
-    """
-    «Удаление» аккаунта клиентом — мягкое: история броней сохраняется,
-    будущие брони отменяются, логин освобождается, войти нельзя.
-    """
     with transaction.atomic(), connection.cursor() as cur:
         if user.is_super:
             cur.execute(
@@ -452,12 +451,15 @@ def delete_own_account(user):
             if cur.fetchone()[0] <= 1:
                 raise ServiceError('Нельзя удалить последнего суперпользователя.')
         _cancel_future_reserves(cur, user.id)
+        cur.execute('SELECT avatar FROM account WHERE id_account = %s', [user.id])
+        row = cur.fetchone()
         cur.execute("""
             UPDATE account
             SET is_active = 0, username = CONCAT('deleted_', id_account),
                 password = %s, first_name = NULL, last_name = NULL, avatar = NULL
             WHERE id_account = %s
         """, [make_password(None), user.id])
+    _delete_avatar_file(row[0] if row else None)
 
 def set_place_points(place_id, points):
     points = _check_points(points, 'Контур помещения')
@@ -591,3 +593,62 @@ def list_all_pcs():
                p.status, p.pos_x, p.pos_y, p.rotation
         FROM pc_setup p ORDER BY p.id_room, p.pc_setup_number
     """)
+
+
+AVATAR_DIR = 'avatars'
+AVATAR_MAX_BYTES = 2 * 1024 * 1024
+AVATAR_TYPES = {'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/gif': '.gif'}
+
+
+def _delete_avatar_file(avatar):
+    if not avatar:
+        return
+    root = os.path.abspath(settings.MEDIA_ROOT)
+    path = os.path.abspath(os.path.join(settings.MEDIA_ROOT, avatar))
+    if path.startswith(root + os.sep) and os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def set_avatar(user, uploaded):
+    if uploaded is None:
+        raise ServiceError('Выберите файл изображения.')
+    if uploaded.size > AVATAR_MAX_BYTES:
+        raise ServiceError('Аватар: максимум 2 МБ.')
+    if uploaded.content_type not in AVATAR_TYPES:
+        raise ServiceError('Аватар: PNG, JPEG, WebP или GIF.')
+    head = uploaded.read(16)
+    uploaded.seek(0)
+    if head.startswith(b'\x89PNG\r\n\x1a\n'):
+        ext = '.png'
+    elif head.startswith(b'\xff\xd8\xff'):
+        ext = '.jpg'
+    elif head[:6] in (b'GIF87a', b'GIF89a'):
+        ext = '.gif'
+    elif head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        ext = '.webp'
+    else:
+        raise ServiceError('Файл не похож на изображение.')
+    if AVATAR_TYPES[uploaded.content_type] != ext:
+        raise ServiceError('Тип файла не совпадает с содержимым.')
+
+    rel = f'{AVATAR_DIR}/{uuid.uuid4().hex[:12]}{ext}'
+    abs_path = os.path.join(settings.MEDIA_ROOT, rel)
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    old = _one('SELECT avatar FROM account WHERE id_account = %s', [user.id])
+    with open(abs_path, 'wb') as out:
+        for chunk in uploaded.chunks():
+            out.write(chunk)
+    _exec('UPDATE account SET avatar = %s WHERE id_account = %s', [rel, user.id])
+    _delete_avatar_file(old['avatar'] if old else None)
+    user.avatar = rel
+    return rel
+
+
+def remove_avatar(user):
+    old = _one('SELECT avatar FROM account WHERE id_account = %s', [user.id])
+    _exec('UPDATE account SET avatar = NULL WHERE id_account = %s', [user.id])
+    _delete_avatar_file(old['avatar'] if old else None)
+    user.avatar = None

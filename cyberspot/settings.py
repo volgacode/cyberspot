@@ -10,11 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
-import os
-from dotenv import load_dotenv
-from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -41,7 +39,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -65,7 +62,7 @@ ROOT_URLCONF = 'cyberspot.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -131,7 +128,6 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'booking/static']
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -151,8 +147,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 MAX_BOOKING_DAYS_AHEAD = 7 # N: бронь не дальше чем на N дней вперёд
 CLIENT_CANCEL_BEFORE_MINUTES = 60 # клиент отменяет не позже чем за час до начала
 MAX_BOOKING_UNITS = 24 # максимум единиц тарифа за одну бронь
-CLIENT_CANCEL_BEFORE_MINUTES = 60 # клиент отменяет не позже чем за час до начала
 # Вход и выход
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
