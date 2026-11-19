@@ -60,17 +60,12 @@ pip install -r requirements.txt
 
 ---
 
-### 4. Создание базы данных через консоль MySQL
+### 4. Настройка переменных окружения (`.env`)
 
-Создайте пустую базу данных одной командой в терминале:
+Cоздание ключа:
 ```bash
-"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p -e "CREATE DATABASE IF NOT EXISTS cyberspot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
-*(При запросе `Enter password:` введите пароль от вашего локального пользователя root).*
-
----
-
-### 5. Настройка переменных окружения (`.env`)
 
 Создайте в корне проекта (рядом с файлом `manage.py`) файл с именем **`.env`** и укажите данные для подключения:
 
@@ -83,14 +78,10 @@ DB_PASSWORD=ваш_пароль_от_mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 ```
-Cоздание ключа:
-```bash
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-```
 
 ---
 
-### 6. Развертывание базы данных и данных
+### 5. Развертывание базы данных и данных
 
 Выберите один из двух вариантов в зависимости от задачи:
 
@@ -106,6 +97,7 @@ python -c "from django.core.management.utils import get_random_secret_key; print
    ```bash
    "/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p --default-character-set=utf8mb4 < schema.sql
    ```
+   *(При запросе `Enter password:` введите пароль от вашего локального пользователя root).*
 2. Создание файлов миграций:
    ```bash
    python manage.py makemigrations booking
@@ -117,7 +109,7 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 ---
 
-### 7. Создание суперпользователя клуба
+### 6. Создание суперпользователя клуба
 
 Создайте учетную запись суперпользователя для доступа к панели управления:
 ```bash
@@ -128,7 +120,7 @@ register_account('boss', 'надёжный_пароль', role='superuser')
 
 ---
 
-### 8. Проверка и запуск сервера
+### 7. Проверка и запуск сервера
 
 Выполните системную проверку и запустите локальный сервер разработки:
 ```bash
