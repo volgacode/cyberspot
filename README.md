@@ -102,11 +102,15 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 #### Вариант Б: Создание таблиц с нуля через миграции Django
 Если вы создаете чистую базу без готового дампа:
-1. Создание файлов миграций:
+1. Создание базы данных
+   ```bash
+   "/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p --default-character-set=utf8mb4 < schema.sql
+   ```
+2. Создание файлов миграций:
    ```bash
    python manage.py makemigrations booking
    ```
-2. Применение миграций:
+3. Применение миграций:
    ```bash
    python manage.py migrate
    ```
